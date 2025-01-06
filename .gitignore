@@ -1,0 +1,5 @@
+.RData
+clean_data/
+.Rproj*
+.Rprofile
+.Rhistory
