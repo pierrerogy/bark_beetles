@@ -105,16 +105,26 @@ specimens %>%
   dplyr::distinct() %>%
   dplyr::arrange(Species) %>%
   dplyr::pull()
-### Remove typo
+
+## Renaming and typo dealing
 specimens <-
   specimens %>%
   dplyr::mutate(Species = ifelse(Species == "staph_ b",
-                                "staph_b", Species))
+                                "staph_b", Species)) %>% 
+  dplyr::mutate(Species = ifelse(Species == "macer",
+                                 "Hylastes_macer", Species))
 
 
 # Make sure abundance has realistic values
 range(specimens$Abundance)
 
+
+# Renaming
+specimens <- 
+  specimens %>% 
+  ## Rename HR1 log
+  dplyr::mutate(log = ifelse(log == "HR1 / HR9(a)",
+                             "HR1", log))
 
 # Make sure there are no weird log names
 specimens %>%
@@ -168,7 +178,7 @@ logs <-
 ## Vector of column names
 name_it <- 
   c("log","site","northing","easting","UTM_zone","siteID",
-    "dbh_live_cm","dbh_interim","dbh_cm_compiled2","attack_den","disk_circum","disk_dia",
+    "dbh_live_cm","dbh_interim","dbh_cm","attack_den","disk_circum","disk_dia",
     "age","mean_phloem_mm","growth_5avg_mm","growth_10avg_mm","log_length_cm","area_m2",
     "mpb_exit_holes_s1","mpb_exit_holes_s2","other_exit_holes_s1","other_exit_holes_s2",
     "bait","burn","mpb_m2")
@@ -203,7 +213,21 @@ logs <-
 logs <-
   logs %>% 
   dplyr::mutate(longitude = round(as.numeric(longitude),4)) %>%
-  dplyr::mutate(latitude = round(as.numeric(latitude),4))
+  dplyr::mutate(latitude = round(as.numeric(latitude),4)) %>% 
+  ## Remove columns we do not want 
+  dplyr::select(-dbh_live_cm, -dbh_interim, 
+                -disk_circum, -disk_dia) %>% 
+  ## One round the one number with too many decimals
+  dplyr::mutate(mean_phloem_mm = ifelse(log  == "BM1",
+                                        1.15, mean_phloem_mm)) %>% 
+  ## Relocate coordinates
+  dplyr::relocate(c(longitude,latitude),
+                  .after = siteID) 
+
+# Remove logs without specimens
+logs <-
+  logs %>%
+  dplyr::filter(log %in% specimens$log)
 
 
 # Clean sites -------------------------------------------------------------
@@ -228,6 +252,22 @@ sites <-
   sites %>% 
   dplyr::mutate(mean_longitude = round(as.numeric(mean_longitude),4)) %>%
   dplyr::mutate(mean_latitude = round(as.numeric(mean_latitude),4))
+
+# Add site code
+sites <- 
+  sites %>% 
+  dplyr::left_join(logs %>% 
+                     dplyr::select(site, siteID) %>% 
+                     dplyr::distinct(),
+                   by = "site") %>%
+  ## And because I like order
+  dplyr::relocate(siteID,
+                  .after = site)
+
+# Remive site name from logs
+logs <- 
+  logs %>% 
+  dplyr::select(-site)
 
 # Save clean data ---------------------------------------------------------
 ## Specimens
