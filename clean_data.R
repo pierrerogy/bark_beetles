@@ -222,7 +222,10 @@ logs <-
                                         1.15, mean_phloem_mm)) %>% 
   ## Relocate coordinates
   dplyr::relocate(c(longitude,latitude),
-                  .after = siteID) 
+                  .after = siteID) %>% 
+  ## Relocate phloem after growth variables
+  dplyr::relocate(mean_phloem_mm,
+                  .after = growth_10avg_mm)
 
 # Remove logs without specimens
 logs <-
